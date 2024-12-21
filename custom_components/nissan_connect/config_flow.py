@@ -1,40 +1,52 @@
 import voluptuous as vol
-from homeassistant.config_entries import (ConfigFlow, OptionsFlow)
-from .const import DOMAIN, CONFIG_VERSION, DEFAULT_INTERVAL_POLL, DEFAULT_INTERVAL_CHARGING, DEFAULT_INTERVAL_STATISTICS, DEFAULT_INTERVAL_FETCH, DEFAULT_REGION, REGIONS
+from homeassistant.config_entries import ConfigFlow, OptionsFlow
+from .const import (
+    DOMAIN,
+    CONFIG_VERSION,
+    DEFAULT_INTERVAL_POLL,
+    DEFAULT_INTERVAL_CHARGING,
+    DEFAULT_INTERVAL_STATISTICS,
+    DEFAULT_INTERVAL_FETCH,
+    DEFAULT_REGION,
+    REGIONS,
+)
 from .kamereon import NCISession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import selector
 
-USER_SCHEMA = vol.Schema({
-    vol.Required("email"): cv.string,
-    vol.Required("password"): cv.string,
-    # vol.Required(
-    #     "interval", default=DEFAULT_INTERVAL_POLL
-    # ): int,
-    # vol.Required(
-    #     "interval_charging", default=DEFAULT_INTERVAL_CHARGING
-    # ): int,
-    # vol.Required(
-    #     "interval_fetch", default=DEFAULT_INTERVAL_FETCH
-    # ): int,
-    # vol.Required(
-    #     "interval_statistics", default=DEFAULT_INTERVAL_STATISTICS
-    # ): int,
-    vol.Required(
-        "region", default=DEFAULT_REGION.lower()): selector.SelectSelector(
+USER_SCHEMA = vol.Schema(
+    {
+        vol.Required("email"): cv.string,
+        vol.Required("password"): cv.string,
+        # vol.Required(
+        #     "interval", default=DEFAULT_INTERVAL_POLL
+        # ): int,
+        # vol.Required(
+        #     "interval_charging", default=DEFAULT_INTERVAL_CHARGING
+        # ): int,
+        # vol.Required(
+        #     "interval_fetch", default=DEFAULT_INTERVAL_FETCH
+        # ): int,
+        # vol.Required(
+        #     "interval_statistics", default=DEFAULT_INTERVAL_STATISTICS
+        # ): int,
+        vol.Required("region", default=DEFAULT_REGION.lower()): selector.SelectSelector(
             selector.SelectSelectorConfig(
-                options=[el.lower() for el in REGIONS], # Translation keys must be lowercase
+                options=[
+                    el.lower() for el in REGIONS
+                ],  # Translation keys must be lowercase
                 mode=selector.SelectSelectorMode.DROPDOWN,
-                translation_key="region"
+                translation_key="region",
             ),
-    ),
-    vol.Required(
-        "imperial_distance", default=False): bool
-})
+        ),
+        vol.Required("imperial_distance", default=False): bool,
+    }
+)
 
 
 class NissanConfigFlow(ConfigFlow, domain=DOMAIN):
     """Config flow."""
+
     VERSION = CONFIG_VERSION
 
     async def async_step_user(self, info):
@@ -46,23 +58,17 @@ class NissanConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             # Validate credentials
-            kamereon_session = NCISession(
-                region=info["region"]
-            )
+            kamereon_session = NCISession(region=info["region"])
 
             try:
-                await self.hass.async_add_executor_job(kamereon_session.login,
-                                                       info["email"],
-                                                       info["password"]
-                                                       )
+                await self.hass.async_add_executor_job(
+                    kamereon_session.login, info["email"], info["password"]
+                )
             except:
                 errors["base"] = "auth_error"
 
             if len(errors) == 0:
-                return self.async_create_entry(
-                    title=info["email"],
-                    data=info
-                )
+                return self.async_create_entry(title=info["email"], data=info)
 
         return self.async_show_form(
             step_id="user", data_schema=USER_SCHEMA, errors=errors
@@ -84,15 +90,14 @@ class NissanOptionsFlow(OptionsFlow):
         if options is not None:
             data = dict(self._config_entry.data)
             # Validate credentials
-            kamereon_session = NCISession(
-                region=data["region"]
-            )
+            kamereon_session = NCISession(region=data["region"])
             if "password" in options:
                 try:
-                    await self.hass.async_add_executor_job(kamereon_session.login,
-                                                           self._config_entry.data.get("email"),
-                                                           options["password"]
-                                                           )
+                    await self.hass.async_add_executor_job(
+                        kamereon_session.login,
+                        self._config_entry.data.get("email"),
+                        options["password"],
+                    )
                 except:
                     errors["base"] = "auth_error"
 
@@ -100,8 +105,8 @@ class NissanOptionsFlow(OptionsFlow):
             if len(errors) == 0:
                 # If password not provided, dont take the new details
                 if not "password" in options:
-                    options.pop('email', None)
-                    options.pop('password', None)
+                    options.pop("email", None)
+                    options.pop("password", None)
 
                 # Update data
                 data.update(options)
@@ -110,29 +115,42 @@ class NissanOptionsFlow(OptionsFlow):
                 )
 
                 # Update options
-                return self.async_create_entry(
-                    title="",
-                    data={}
-                )
+                return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
-            step_id="init", data_schema=vol.Schema({
-                # vol.Required("email", default=self._config_entry.data.get("email", "")): cv.string,
-                vol.Optional("password"): cv.string,
-                vol.Required(
-                    "interval", default=self._config_entry.data.get("interval", DEFAULT_INTERVAL_POLL)
-                ): int,
-                vol.Required(
-                    "interval_charging", default=self._config_entry.data.get("interval_charging", DEFAULT_INTERVAL_CHARGING)
-                ): int,
-                vol.Required(
-                    "interval_fetch", default=self._config_entry.data.get("interval_fetch", DEFAULT_INTERVAL_FETCH)
-                ): int,
-                vol.Required(
-                    "interval_statistics", default=self._config_entry.data.get("interval_statistics", DEFAULT_INTERVAL_STATISTICS)
-                ): int,
-                # Excluded from config flow under #61
-                # vol.Required(
-                #     "imperial_distance", default=self._config_entry.data.get("imperial_distance", False)): bool
-            }), errors=errors
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    # vol.Required("email", default=self._config_entry.data.get("email", "")): cv.string,
+                    vol.Optional("password"): cv.string,
+                    vol.Required(
+                        "interval",
+                        default=self._config_entry.data.get(
+                            "interval", DEFAULT_INTERVAL_POLL
+                        ),
+                    ): int,
+                    vol.Required(
+                        "interval_charging",
+                        default=self._config_entry.data.get(
+                            "interval_charging", DEFAULT_INTERVAL_CHARGING
+                        ),
+                    ): int,
+                    vol.Required(
+                        "interval_fetch",
+                        default=self._config_entry.data.get(
+                            "interval_fetch", DEFAULT_INTERVAL_FETCH
+                        ),
+                    ): int,
+                    vol.Required(
+                        "interval_statistics",
+                        default=self._config_entry.data.get(
+                            "interval_statistics", DEFAULT_INTERVAL_STATISTICS
+                        ),
+                    ): int,
+                    # Excluded from config flow under #61
+                    # vol.Required(
+                    #     "imperial_distance", default=self._config_entry.data.get("imperial_distance", False)): bool
+                }
+            ),
+            errors=errors,
         )
